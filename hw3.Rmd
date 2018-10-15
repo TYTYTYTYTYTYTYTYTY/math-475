@@ -1,0 +1,271 @@
+---
+title: 'Math475 Homework3 '
+author: 'Muzhou liu '
+date: "October 17, 2018"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+header-includes: \usepackage{amsthm}
+---
+
+
+```{r setup, echo=FALSE, include=FALSE}
+# set global chunk options: images will be 7x5 inches
+knitr::opts_chunk$set(fig.width=7, fig.height=5)
+options(digits = 4)
+library(tidyverse)
+library(faraway)
+library(latex2exp)
+library(MPV)
+library(HH)
+```
+
+```{r}
+
+
+set.seed(12345)
+
+num_nodes <- 15
+
+A<- matrix(round(runif(num_nodes * num_nodes)), num_nodes, num_nodes)
+
+diag(A) <- 0 
+
+A[lower.tri(A)] <- A[upper.tri(A)]
+
+
+### c =1, p=0 
+
+n <- 15
+
+set.seed(12345)
+pi <- as.integer(runif(n)>0.5)
+
+
+rxy <- function(init_par, asso_matrix){
+  nc <- sum(init_par)
+  np <- length(init_par)-nc
+  vc <- sum(1-asso_matrix[,which(init_par ==1)]) - nc # subtract over counting diag
+  vp <- sum(asso_matrix[,which(init_par ==0)]) #diag are 0 so ok
+  dc <- nc^2-nc
+  dp <- np^2-np
+  d <- dc+dp
+  
+  sx <- sqrt((dc/d)*(dp/d))
+  sy <- sqrt(((dc -vc+vp)/d)*((dp-vp+vc)/d))
+  s2xy <- ((dc-vc)/d)-(dc/d)*((dc-vc-vp)/d)
+  
+  rxy <- s2xy/(sx*sy)
+  
+  
+  return(rxy)
+  
+}
+
+
+
+local_search_steps <- function(init_par, asso_matrix){
+  init_pi <- init_par
+  init_score <- rxy(init_pi,asso_matrix)
+  score_record <- rep(0,length(pi))
+  for (i in 1:length(pi)) {
+    new_pi <- init_par
+    new_pi[i] <- 1- init_par[i]
+    #print(new_pi)
+    score_record[i] <- rxy(new_pi,asso_matrix)
+    #print(score_record)
+  }
+  
+ 
+  
+  if(max(score_record, na.rm = TRUE) >= init_score & !is.infinite(max(score_record,na.rm = TRUE))){ 
+    steepest <- which.max(score_record)
+    next_itr <- init_pi
+    next_itr[steepest] <- 1- init_pi[steepest]
+    return(next_itr)}
+  else{return(init_pi)}
+}
+
+
+local_search_steps_itr <- function(init_par, asso_matrix, tol, max_step ){
+
+
+  diff <- 2*tol
+  num_itr <- 0 
+  pi_old <- init_par
+  asso_matrix <- A
+  
+  while (diff > tol & num_itr < max_step) {
+    next_itr <- local_search_steps(pi_old, asso_matrix)
+    #print(next_itr)
+    
+    pi_new <- next_itr
+    if(all(pi_new == pi_old)){
+      num_itr <- num_itr+1
+      return(list(message = "No neighborhood points increases R_xy ", solution = pi_new, num_itr= num_itr,R_xy = rxy(pi_new,A)))
+    }
+    else{
+      num_itr <- num_itr+1
+      diff <- abs(rxy(pi_new,asso_matrix)-rxy(pi_old,asso_matrix))
+      pi_old <- pi_new
+    }
+
+  }
+
+}
+
+# 
+# pi2 <- local_search_steps(pi1,A)
+# pi1
+# pi2
+# 
+# rxy(pi2,A)
+# # 
+# local_search_steps(pi,A)
+# 
+# 
+ local_search_steps_itr(pi,A,0.001,1000)
+# 
+ local_search_steps_itr(c(1,0,0,0,0,0,0,0,0,0,1,0,0,0,0),A,0.01,1000)
+ 
+ 
+ 
+ local_search_steps_itr(c( 1,1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1),A,0.01,1000)
+ #local_search_steps_itr(c(rep(1,15)),A,0.001,1000)
+
+#local_search_steps(pi,A)
+ 
+rxy(c( 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),A)
+rxy(c( 1,1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1),A)
+```
+
+
+```{r}
+
+annealing_step <- function(init_par, asso_matrix, temp){
+  init_pi <- init_par
+  init_score <- rxy(init_pi,asso_matrix)
+  score_record <- rep(0,length(pi))
+  for (i in 1:length(pi)) {
+    new_pi <- init_par
+    new_pi[i] <- 1- init_par[i]
+    #print(new_pi)
+    score_record[i] <- rxy(new_pi,asso_matrix)
+    #print(score_record)
+  }
+  
+  rand_choice <- sample.int(length(init_par),1)
+  #print(rand_choice)
+  
+  if(score_record[rand_choice]>=init_score & (!is.na(score_record[rand_choice])) & !is.infinite(score_record[rand_choice])){
+    new_pi <- init_pi
+    new_pi[rand_choice] <-1 - init_pi[rand_choice]
+    return(new_pi)
+  }
+  else {
+    p_a <- min(1, exp((init_score-score_record[rand_choice]/temp)))
+    if(rbinom(1,1,p_a)==1 & !is.na(p_a)){
+      return(new_pi)
+    }else{
+      return(init_pi)
+    }
+  }
+  
+}
+
+annealing_step_itr <- function(init_par,asso_matrix, max_iter, temps){
+  num_iter <- 0
+  old_pi <- init_par
+  while(num_iter < max_iter){
+    next_iteration <- annealing_step(old_pi,asso_matrix,temps[num_iter+1])
+    new_pi<- next_iteration
+    num_iter <- num_iter+1
+    #print(num_iter)
+    old_pi <- new_pi
+  }
+  return(list(solution = new_pi, rxy(new_pi,asso_matrix )))
+}
+
+annealing_step_itr(pi,A,1000,(1000:1)/1000)
+```
+
+
+
+\[ \]
+```{r}
+Simpson_rule <- function(fun, up, lo, n ){
+   if(lo>up){
+     c <- up
+     up <- lo
+     lo <- c
+   }
+   f <- function(x){eval(parse(text=paste(fun)))}
+   xi_s <- a+ c(1:n)/n *(up-lo)
+   h <- (up-lo)/n
+   sum <-0 
+   for (i in 1:(n-1)) {
+     sum <- sum+ h/6 * (f(xi_s[i])+4* f((xi_s[i]+xi_s[i+1])/2) + f(xi_s[i+1])) 
+   }
+   
+   return(sum)
+}
+
+# mu=0, sigma=1
+ Simpson_rule('1/(x*1*sqrt(2*pi))* exp()')
+
+
+
+```
+
+
+
+```{r}
+laplace_approx <- function(fun, up, lo, ){
+    if(lo>up){
+     c <- up
+     up <- lo
+     lo <- c
+   } 
+}
+
+```
+
+
+
+```{r}
+sample_std_normal <- function(n){
+  x <- runif(n)
+  y <- runif(n)
+  df <- data.frame(x,y)
+  
+  return(apply(df,1, function(x){sqrt((-2)*log(x[1]))*cos(2*pi*x[2])}))
+  
+}
+
+
+qqnorm(sample_std_normal(10000))
+
+ks.test(rnorm(100000),sample_std_normal(100000))
+
+
+# the generator is okay 
+
+
+W <- exp(0+1*sample_std_normal(10000))
+
+
+  a <-c(0)
+  n <- 10^4
+for (i in 1:1000) {
+
+  set.seed(5*i)
+  a[i]<-prod(exp(0+1*sample_std_normal(n)))^(1/n)
+  
+}
+
+plot(a)
+
+
+```

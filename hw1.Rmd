@@ -1,0 +1,201 @@
+---
+title: "Math475 Homework1 "
+author: "Muzhou liu "
+date: "September 14, 2018"
+output: pdf_document
+
+header-includes:
+   - \usepackage{amsthm}
+---
+
+
+```{r setup, echo=FALSE, include=FALSE}
+# set global chunk options: images will be 7x5 inches
+knitr::opts_chunk$set(fig.width=7, fig.height=5)
+#options(digits = 4)
+library(tidyverse)
+library(GGally)
+library(latex2exp)
+```
+
+ 1. problem 1 
+ 
+ * a)
+ 
+```{r}
+class(diamonds)
+
+```
+
+     The diamonds data set is a tibble. 
+    
+ * b)
+```{r}
+dim(diamonds)
+```
+
+    The dataset has 53940 rows and 10 columns. 
+    
+ * c)
+```{r}
+diamonds %>% 
+  arrange(desc(price)) %>%
+  .[1,]
+
+```
+
+    The most expensive diamond has a weight of 2.29 carat, premium cut quality and level I color. Dimensions of 8.5x8.47x5.16 mm;its total depth precentage is 60.8 and its width of top of diamond relateive to widest point is 60mm. 
+
+ * d)
+```{r}
+diamonds %>%
+  filter(cut == 'Premium') %>%
+  ncol()
+
+```
+
+    There are totally 10 diamonds with a premium cut quality. 
+
+
+  2. problem 2 
+  
+ * a)
+ 
+```{r}
+ggplot(data = diamonds) +
+  geom_point(aes(carat, price, color=color ,size = cut  ))
+
+
+ggplot(data = diamonds, aes(price)) + 
+  geom_histogram(aes(colour = cut, fill= cut), binwidth = 800)
+
+ggplot(data = diamonds)+
+  geom_boxplot(aes(cut,price/carat))
+
+# ggplot(data = diamonds) +
+#   geom_smooth(aes(carat,price,color = cut))
+# 
+# ggplot(data = diamonds) +
+#   geom_smooth(aes(carat,price,color = color))
+
+ggplot(data = diamonds) + 
+  geom_smooth(aes(carat, price,color = clarity))
+
+ggplot(data =diamonds) + 
+  geom_tile( aes(clarity,color, fill =price/carat)) +
+  scale_fill_gradient(low = "white",high = "black")
+
+
+```
+According to the first polot, we can see that diamonds that have better color tend to be more expensive when the weight of the diamonds are appromixately equal. Also, diamnods have better cut quality tend to stay in top of the plot, which means they have higher price. 
+From the second plot
+
+ 3. problem 3 
+ 
+```{r}
+
+my.bisect <- function(fun, interval, tol){
+  f <- function(x){eval(parse(text=paste(fun)))}
+  
+  step =0 
+  if(f(interval[1])*f(interval[2])>0){
+    return('Error: invalid interval')
+  }
+  else{ k <- sum(interval)/2
+    while(abs(f(k))>=tol){ 
+      if(f(k)*f(interval[1])<0){ 
+        interval<-c(interval[1],k)
+        k <- mean(interval)
+        step <- step+1
+      }
+      else{
+        interval <- c(k,interval[2])
+        k <- mean(c(k,interval[2]))
+        step <- step+1
+      }
+    }
+  }
+  output <- list(k,step)
+  names(output) <-c("root","steps")
+  return(output)
+}
+
+
+```
+ 
+ * a)
+
+\begin{equation}
+\frac{x}{dx}(\frac{log(x)}{1+x}) = \frac{1+x-x\cdot log(x)}{x(1+x)^2}
+\end{equation}
+```{r}
+output1 <- my.bisect("((1+x)-x*log(x))/(x*(1+x)^2)",c(1,5),0.001)
+
+print(output1)
+```
+
+ * b)
+```{r}
+log2(0.001)
+
+```
+ * c)
+```{r}
+
+```
+
+ * d)
+
+ 
+```{r}
+fun4 <-function(g){paste('1-pt(sqrt(x^2 * (',
+                         paste(g), 
+                         ' - 1) / (',
+                         paste(g),
+                         ' - x^2)), df = ',
+                         paste(g), 
+                         '-1)-(1-pt(sqrt(x^2 * ', 
+                         paste(g),
+                         ' / (',
+                         paste(g),
+                         ' + 1 - x^2)), df = ', 
+                         paste(g),'))')}
+for (g in c(4:25,100,500,1000)){ print(c(g,
+                                         my.bisect(fun4(g),c(0+10^(-4),1.2*(log(g))),0.00000000001)$root,
+                                         my.bisect(fun4(g),c(0+10^(-4),1.2*log(g)),0.00000000001)$steps))
+}
+```
+
+
+ 4. problem 4 
+ 
+```{r}
+ my.integrate = function(fun,bound){
+          f <- function(x){eval(parse(text=paste(fun)))}
+          if(bound[1] < -10^5){bound[1] <- -10^3}
+          if(bound[2] >= 10^5) {bound[2] <- 10^3}
+          if(bound[2] < bound[1]) {bound = sort(bound)}
+          
+          i <- bound[1]
+          container  <- 0 
+          while (i <= bound[2]) { i
+            container <- container + f(i)* 0.05
+            i <- i+0.05
+          }
+          return(container)
+ }
+
+
+pdf = function(eta,theta){ paste('1/(' ,paste(theta),'*pi*(1 + ((x-'
+                                 , paste(eta),')/',paste(theta),')^2))') } 
+
+
+for(i in c(-10:10)){
+  print(c(i,my.integrate(pdf(0,1),c(-Inf,i)),pcauchy(i)))
+}
+
+for(i in c(-10:10)){
+  print(c(i,my.integrate(pdf(2,3),c(-Inf,i)),pcauchy(i,2,3)))
+}
+
+```

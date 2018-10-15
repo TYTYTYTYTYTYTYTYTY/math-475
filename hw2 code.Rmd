@@ -1,0 +1,358 @@
+---
+title: "Math475 Homework2 "
+author: "Muzhou liu "
+date: "September 28, 2018"
+output: pdf_document
+
+header-includes:
+   - \usepackage{amsthm}
+   - \usepackage{ulem}
+   - \usepackage[makeroom]{cancel}
+---
+
+
+```{r setup, echo=FALSE, include=FALSE}
+# set global chunk options: images will be 7x5 inches
+knitr::opts_chunk$set(fig.width=7, fig.height=5)
+options(digits = 5)
+library(tidyverse)
+library(faraway)
+library(latex2exp)
+library(MPV)
+library(glm2)
+library(evd)
+```
+ 1. Problem 1 
+
+ * d)
+
+loglikelihood
+```{r}
+log_likelihood_poisson_regression <- function(beta_s, x_data, y_data){
+  data_full <- cbind(x_data,y_data)
+  return(
+  sum(apply(data_full,1, function(x){
+    x[4]* log(exp(t(as.matrix(x[1:3])) %*% as.matrix(beta_s))) -
+      exp(t(as.matrix(x[1:3])) %*% as.matrix(beta_s)) - log(factorial(x[4]))
+  }))
+  )
+}
+
+```
+
+Graidant of loglikelihood 
+```{r}
+# data : df(x1, x2, x3, y)
+
+grad_poisson_regression_3x1 <- function(beta_s, x_data, y_data){
+  
+  data_full <- cbind(x_data, y_data)
+  
+  return(
+    matrix( c( sum(apply(data_full, 1, 
+                         function(x){x[4]*x[1]-exp(t(as.matrix(x[1:3])) %*% as.matrix(beta_s))*x[1]})),
+               sum(apply(data_full, 1, 
+                         function(x){x[4]*x[2]-exp(t(as.matrix(x[1:3])) %*% as.matrix(beta_s))*x[2]})),
+               sum(apply(data_full, 1, 
+                         function(x){x[4]*x[3]-exp(t(as.matrix(x[1:3])) %*% as.matrix(beta_s))*x[3]}))
+          ) ,3,1  )
+        )
+}
+
+```
+
+hessian and inverse of hessian
+```{r}
+hessian_poisson_regression_3x3 <- function(beta_s, x_data, y_data){
+
+    return( 
+    
+        matrix( c( 
+          sum(apply(x_data, 1, function(x){-x[1]*x[1] * exp(t(as.matrix(x)) %*% as.matrix(beta_s))})),
+          sum(apply(x_data, 1, function(x){-x[1]*x[2] * exp(t(as.matrix(x)) %*% as.matrix(beta_s))})),
+          sum(apply(x_data, 1, function(x){-x[1]*x[3] * exp(t(as.matrix(x)) %*% as.matrix(beta_s))})),
+          sum(apply(x_data, 1, function(x){-x[2]*x[1] * exp(t(as.matrix(x)) %*% as.matrix(beta_s))})),
+          sum(apply(x_data, 1, function(x){-x[2]*x[2] * exp(t(as.matrix(x)) %*% as.matrix(beta_s))})),
+          sum(apply(x_data, 1, function(x){-x[2]*x[3] * exp(t(as.matrix(x)) %*% as.matrix(beta_s))})),
+          sum(apply(x_data, 1, function(x){-x[3]*x[1] * exp(t(as.matrix(x)) %*% as.matrix(beta_s))})),
+          sum(apply(x_data, 1, function(x){-x[3]*x[2] * exp(t(as.matrix(x)) %*% as.matrix(beta_s))})),
+          sum(apply(x_data, 1, function(x){-x[3]*x[3] * exp(t(as.matrix(x)) %*% as.matrix(beta_s))}))
+              ) , 3, 3, byrow = TRUE )
+
+    )
+}
+
+
+inverse_hassian_poisson_regression_3x3<- function(beta_s, x_data, y_data){
+  
+  return(solve(hessian_poisson_regression_3x3( beta_s,x_data, y_data)))
+}
+```
+
+Newton's method
+```{r}
+
+newtons_method <- function(init_par, grad, fun,inv_hess, tol, max_iter, x_data, y_data){
+    
+    rel_tol <- 2*tol
+    par_old <- init_par
+    iter_count <- 0
+    iter_par <- matrix(0,max_iter+1,length(init_par))
+    iter_par[1,] <- t(init_par) 
+
+    while(rel_tol > tol & iter_count < max_iter){
+
+        par_new <- par_old - inv_hess(par_old, x_data, y_data)%*%grad(par_old, x_data,y_data)
+        rel_tol <- max(abs(par_new - par_old)/par_old)
+        par_old <- par_new
+        iter_count <- iter_count + 1
+        iter_par[iter_count+1,] <- t(par_new)
+
+    }
+
+    return(list(solution = par_new, fun_solution = fun(par_new,x_data, y_data),
+                final_tol = rel_tol, num_iters = iter_count, all_iters = iter_par[1:iter_count,]))
+
+}
+```
+
+
+Finding the initial point that have the hightest likelihood. 
+```{r}
+y_data <- crabs %>% 
+  dplyr::select(Satellites)
+
+x_data <- crabs %>% 
+  dplyr::select(Width, Dark,  GoodSpine) %>%
+  mutate(Dark = as.integer(Dark), GoodSpine = as.integer(GoodSpine))
+
+
+
+set.seed(10)
+
+test_initial_poirnt <- rnorm(300,0,10) %>% 
+  matrix(100,3) %>% 
+  as.data.frame() 
+
+test_likelihood <- apply(test_initial_poirnt,1,
+                         function(x){log_likelihood_poisson_regression(x,x_data,y_data)}) 
+
+init_par <- t(test_initial_poirnt[which(test_likelihood == max(test_likelihood,na.rm = TRUE)),])
+
+```
+
+fitting the crabs data
+```{r}
+y_data <- crabs %>% 
+  dplyr::select(Satellites)
+
+x_data <- crabs %>% 
+  dplyr::select(Width, Dark,  GoodSpine) %>%
+  mutate(Dark = as.integer(Dark), GoodSpine = as.integer(GoodSpine))
+
+
+newtons_method(init_par, grad_poisson_regression_3x1, log_likelihood_poisson_regression ,
+               inverse_hassian_poisson_regression_3x3, 0.001, 200,x_data, y_data  )
+```
+
+
+ 2. problem 2 
+ 
+```{r}
+set.seed(12345)
+weibull_sample <- rweibull(50, shape = 5, scale = 7)
+contraction_mapping <- function(b, x){
+  n <- length(x)
+  return((sum((x^b)*log(x))/sum(x^b) - sum(log(x))/n)^-1)
+}
+
+
+b_last <- .1
+b_next <- 1
+
+
+while(abs(b_next - b_last)>0.01){
+  b_last <- b_next
+  b_next <- contraction_mapping(b_last, weibull_sample)
+}
+b_next
+
+theta <- (sum(weibull_sample^b_next)/length(weibull_sample))^(1/b_next)
+theta
+```
+
+
+ 3. problem 3 
+ 
+ 
+ * a)
+ 
+```{r}
+log_likelihood_frechet <- function(alpha_s, data){
+  n <- length(data)
+  alpha <- alpha_s[1]
+  s <- alpha_s[2]
+  return( n*log(alpha/s) +sum(log(data/s))*(-1-alpha) -sum((data/s)^(-alpha))
+    
+  )
+}
+
+secant_method <- function(init_par, fun, tol, max_iter, data){
+
+    eps <- 0.01
+    rel_tol <- 2*tol
+    par_old <- init_par
+    iter_count <- 0
+      iter_par <- matrix(0,max_iter+1,length(init_par))
+      iter_par[1,] <- t(init_par)
+    dim_par <- length(init_par)
+    approx_grad <- rep(0, dim_par)
+    approx_hess <- matrix(0, dim_par, dim_par)  
+
+    while(rel_tol > tol & iter_count < max_iter){
+
+        for(i in 1:dim_par){
+            del <- rep(0,dim_par)
+            del[i] <- eps
+            approx_grad[i] <- (0.5/eps)*(fun(t(par_old+matrix(del,dim_par,1)),data) 
+                                         - fun(t(par_old), data))
+        }
+
+        for(i in 1:dim_par){
+            del1 <- rep(0,dim_par)
+            del1[i] <- eps
+            for(j in 1:dim_par){
+                del2 <- rep(0,dim_par)
+                del2[j] <- eps
+                if(i == j){
+                    approx_hess[i,j] <- (1/(eps^2))*
+                      (fun(t(par_old+matrix(del1,dim_par,1)),data) -
+                                                       2*fun(t(par_old),data) + fun(t(par_old-matrix(del1,dim_par,1)),data))    
+                }else {
+                    approx_hess[i,j] <-(0.25/(eps^2))*(fun(t(par_old+matrix(del1,dim_par,1)+
+                                                               matrix(del2,dim_par,1)),data)
+                                            -fun(t(par_old+matrix(del1,dim_par,1)-
+                                                     matrix(del2,dim_par,1)),data)
+                                            -fun(t(par_old-matrix(del1,dim_par,1)+
+                                                     matrix(del2,dim_par,1)),data)
+                                            +fun(t(par_old-matrix(del1,dim_par,1)-
+                                                     matrix(del2,dim_par,1)),data))
+                }
+            }
+        }
+
+        
+        par_new <- par_old - solve(approx_hess)%*%approx_grad 
+        rel_tol <- max(abs(par_new - par_old)/par_old)
+        par_old <- par_new
+        iter_count <- iter_count + 1
+        iter_par[iter_count+1,] <- t(par_new)
+
+    }
+
+    return(list(solution = par_new, fun_solution = fun(t(par_new), data), 
+                final_tol = rel_tol, num_iters = iter_count, 
+                all_iters = iter_par[1:iter_count,]))
+}
+
+set.seed(12345)
+frechet_sample <- rfrechet(100,0,2,3)
+
+
+set.seed(10)
+
+test_initial_poirnt3 <- runif(300,0,10) %>% 
+  matrix(150,2) %>% 
+  as.data.frame() 
+
+test_likelihood3 <- apply(test_initial_poirnt3,1,
+                         function(x){log_likelihood_frechet(x,frechet_sample)}) 
+                                     
+init_par3 <- t(test_initial_poirnt3[which(test_likelihood3 == max(test_likelihood3,na.rm = TRUE)),])
+                                     
+
+secant_method(c(2,2), log_likelihood_frechet,0.001,2000,frechet_sample)
+
+```
+
+
+```{r}
+
+grad_frechet <- function(alpha_s, data){
+    n <- length(data)
+  alpha <- alpha_s[1]
+  s <- alpha_s[2]
+  return(matrix(c( n/alpha - sum(log(data/s))+ sum((data/s)^(-alpha)*log(data/s)),
+                   -n/s+n*(alpha+1)/s -sum(1/s*alpha*(data/s)^(-alpha))
+    
+  ),2,1))
+}
+
+
+ quasi_newton_method_rank1 <- function(init_par, grad, tol,learning_rate, max_itr,data){
+
+  step <- learning_rate
+  H <- matrix(c(1,0,0,1),length(init_par),length(init_par))
+  old_par <- as.matrix(init_par)
+  rel_tol <- tol*2
+  n_itr <- 0
+  
+  while(rel_tol > tol & n_itr < max_itr){
+    new_par <- old_par - H%*% grad(old_par,frechet_sample)*step
+    zn <- new_par-old_par
+    yn <- grad(new_par,frechet_sample)-grad(old_par,frechet_sample)
+    
+    H <- H+ ((zn- H %*% yn) %*% t(zn- H %*%yn)/(as.double(t(zn- H %*% yn) %*% yn)))
+    old_par <- new_par
+    n_itr <- n_itr+1
+    rel_tol<- norm(grad(new_par,frechet_sample))
+    
+    # print(new_par)
+    # print(rel_tol)
+  }
+
+   return(list(solution = new_par,'number of iteration' = n_itr))
+}
+# 
+quasi_newton_method_rank1(c(2,2),grad_frechet,0.001,0.01,20000,frechet_sample)
+```
+
+```{r, warning= FALSE}
+# quasi_newton_method_BFGS <- function(init_par, grad, tol,learning_rate, max_itr,data){
+#   # init_par <- c(2,2)
+#   # max_itr <- 20000
+#   # tol <- 0.001
+#   # data <- frechet_sample
+#   # learning_rate <- 0.001
+#   step <- learning_rate
+#   H <- matrix(c(1,0,0,1),length(init_par),length(init_par))
+#   old_par <- as.matrix(init_par)
+#   rel_tol <- tol*2
+#   n_itr <- 0
+#   I <- matrix(c(1,0,0,1),length(init_par),length(init_par))
+#   while(rel_tol > tol & n_itr < max_itr){
+#     new_par <- old_par - H%*% grad(old_par,frechet_sample)*step
+#     zn <- new_par-old_par
+#     yn <- grad(new_par,frechet_sample)-grad(old_par,frechet_sample)
+#     
+#     H <- (I - (zn %*% t(yn))/as.double(t(zn) %*% yn)) %*% H %*% 
+#       (I - (zn %*% t(yn))/as.double(t(zn) %*% yn)) + (zn %*% t(zn))/as.double(t(zn) %*% yn)
+#     old_par <- new_par
+#     n_itr <- n_itr+1
+#     rel_tol<- norm(grad(new_par,frechet_sample))
+#      # 
+#      # print(new_par)
+#      # print(rel_tol)
+#   }
+# 
+#    return(list(solution = new_par,'number of iteration' = n_itr))
+# }
+
+
+# quasi_newton_method_BFGS(c(2,2),grad_frechet,0.001,0.001,20000,frechet_sample)
+
+optim(c(2,2),function(x){log_likelihood_frechet(x,frechet_sample)}, 
+      function(x){grad_frechet(x,frechet_sample)} ,
+      method = "BFGS", control = list(fnscale = -0.001))
+
+```
