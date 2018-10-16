@@ -59,7 +59,7 @@ rxy <- function(init_par, asso_matrix){
   
   rxy <- s2xy/(sx*sy)
   
-  
+  if(is.infinite(rxy)| is.na(rxy)){rxy <- -1} # exclude the condition when dc or dp is 0 
   return(rxy)
   
 }
@@ -80,7 +80,7 @@ local_search_steps <- function(init_par, asso_matrix){
   
  
   
-  if(max(score_record, na.rm = TRUE) >= init_score & !is.infinite(max(score_record,na.rm = TRUE))){ 
+  if(max(score_record, na.rm = TRUE) >= init_score ){ 
     steepest <- which.max(score_record)
     next_itr <- init_pi
     next_itr[steepest] <- 1- init_pi[steepest]
@@ -128,17 +128,10 @@ local_search_steps_itr <- function(init_par, asso_matrix, tol, max_step ){
 # 
  local_search_steps_itr(pi,A,0.001,1000)
 # 
- local_search_steps_itr(c(1,0,0,0,0,0,0,0,0,0,1,0,0,0,0),A,0.01,1000)
+ local_search_steps_itr(c(1,0,0,0,0,0,0,0,0,1,0,0,0,0,0),A,0.01,1000)
  
+  local_search_steps_itr(c( 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1),A,0.01,1000)
  
- 
- local_search_steps_itr(c( 1,1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1),A,0.01,1000)
- #local_search_steps_itr(c(rep(1,15)),A,0.001,1000)
-
-#local_search_steps(pi,A)
- 
-rxy(c( 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),A)
-rxy(c( 1,1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1),A)
 ```
 
 
@@ -159,7 +152,7 @@ annealing_step <- function(init_par, asso_matrix, temp){
   rand_choice <- sample.int(length(init_par),1)
   #print(rand_choice)
   
-  if(score_record[rand_choice]>=init_score & (!is.na(score_record[rand_choice])) & !is.infinite(score_record[rand_choice])){
+  if(score_record[rand_choice]>=init_score ){
     new_pi <- init_pi
     new_pi[rand_choice] <-1 - init_pi[rand_choice]
     return(new_pi)
@@ -189,6 +182,8 @@ annealing_step_itr <- function(init_par,asso_matrix, max_iter, temps){
 }
 
 annealing_step_itr(pi,A,1000,(1000:1)/1000)
+
+annealing_step_itr(c(1,0,0,0,0,0,0,0,0,1,0,0,0,0,0),A,1000,(1000:1)/1000)
 ```
 
 
