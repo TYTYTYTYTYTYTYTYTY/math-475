@@ -202,7 +202,7 @@ Simpson_rule <- function(fun, up, lo, n ){
      lo <- c
    }
    f <- function(x){eval(parse(text=paste(fun)))}
-   xi_s <- a+ c(1:n)/n *(up-lo)
+   xi_s <- lo+ c(1:n)/n *(up-lo)
    h <- (up-lo)/n
    sum <-0 
    for (i in 1:(n-1)) {
@@ -212,10 +212,17 @@ Simpson_rule <- function(fun, up, lo, n ){
    return(sum)
 }
 
-# mu=0, sigma=1
- Simpson_rule('1/(x*1*sqrt(2*pi))* exp()')
-
-
+# mu=0, sigma=1 n = 1000
+ Simpson_rule('1/(sqrt(1/1000)*sqrt(2*pi))* exp(-((log(x)-0)^2)/(2/1000))',10000,0,100000)
+ 
+# mu=1, sigma=1 n = 1000
+  Simpson_rule('1/(sqrt(1/1000)*sqrt(2*pi))* exp(-((log(x)-1)^2)/(2/1000))',10000,0,100000)
+  
+# mu=1, sigma=2 n = 1000
+  Simpson_rule('1/(sqrt(2/1000)*sqrt(2*pi))* exp(-((log(x)-1)^2)/(4/1000))',20000,0,100000)
+  
+# mu=2, sigma=2 n = 1000
+  Simpson_rule('1/(sqrt(2/1000)*sqrt(2*pi))* exp(-((log(x)-2)^2)/(4/1000))',20000,0,100000)
 
 ```
 
@@ -244,23 +251,34 @@ sample_std_normal <- function(n){
   
 }
 
-
-qqnorm(sample_std_normal(10000))
-
-ks.test(rnorm(100000),sample_std_normal(100000))
-
-
+#qqnorm(sample_std_normal(10000))
+#ks.test(rnorm(100000),sample_std_normal(100000))
 # the generator is okay 
 
+# mu =0 , sigma =1 , n=1000
+W_01 <- exp(0+1*sample_std_normal(1000))
+prod(W_01)^(1/1000)
 
-W <- exp(0+1*sample_std_normal(10000))
+# mu =1 , sigma =1 , n=1000
+pool11 <- data.frame(rep(1,1000))
+apply(pool11,1 , function(x){W_11 <- exp(1+1*(sample_std_normal(300))) 
+                              return(prod(W_11)^(1/300))}) %>%mean()
+
+
+
+
+
+# mu =2 , sigma =2 , n=1000
+pool22 <- data.frame(rep(1,1000))
+apply(pool22,1 , function(x){W_11 <- exp(2+sample_std_normal(300)+sample_std_normal(300)) 
+                              return(prod(W_11)^(1/300))}) %>%mean()
+
 
 
   a <-c(0)
   n <- 10^4
 for (i in 1:1000) {
 
-  set.seed(5*i)
   a[i]<-prod(exp(0+1*sample_std_normal(n)))^(1/n)
   
 }
