@@ -40,7 +40,7 @@ A[lower.tri(A)] <- A[upper.tri(A)]
 n <- 15
 
 set.seed(12345)
-pi <- as.integer(runif(n)>0.5)
+pi1 <- as.integer(runif(n)>0.5)
 
 
 rxy <- function(init_par, asso_matrix){
@@ -64,15 +64,15 @@ rxy <- function(init_par, asso_matrix){
   return(rxy)
   
 }
-asso_matrix <- A
-init_par <- c(1,rep(0,14))
-rxy(c(rep(0,15)),A)
+#asso_matrix <- A
+#init_par <- c(1,rep(0,14))
+#rxy(c(1,1,1,rep(0,12)),A)
 
 local_search_steps <- function(init_par, asso_matrix){
   init_pi <- init_par
   init_score <- rxy(init_pi,asso_matrix)
-  score_record <- rep(0,length(pi))
-  for (i in 1:length(pi)) {
+  score_record <- rep(0,length(init_par))
+  for (i in 1:length(init_par)) {
     new_pi <- init_par
     new_pi[i] <- 1- init_par[i]
     #print(new_pi)
@@ -80,7 +80,7 @@ local_search_steps <- function(init_par, asso_matrix){
     #print(score_record)
   }
   
-  #print(score_record)
+  print(score_record)
   
   if(max(score_record, na.rm = TRUE) >init_score){ 
     steepest <- which.max(score_record)
@@ -92,9 +92,7 @@ local_search_steps <- function(init_par, asso_matrix){
 
 
 local_search_steps_itr <- function(init_par, asso_matrix, tol, max_step ){
-
-
-  diff <- 2*tol
+ diff <- 2*tol
   num_itr <- 0 
   pi_old <- init_par
   asso_matrix <- A
@@ -102,7 +100,6 @@ local_search_steps_itr <- function(init_par, asso_matrix, tol, max_step ){
   while (diff > tol & num_itr < max_step) {
     next_itr <- local_search_steps(pi_old, asso_matrix)
     #print(next_itr)
-    
     pi_new <- next_itr
     if(all(pi_new == pi_old)){
       num_itr <- num_itr+1
@@ -128,7 +125,7 @@ local_search_steps_itr <- function(init_par, asso_matrix, tol, max_step ){
 # local_search_steps(pi,A)
 # 
 # 
- local_search_steps_itr(pi,A,0.001,1000)
+ local_search_steps_itr(pi1,A,0.001,1000)
  
  local_search_steps_itr(c(1,1,1,1,1,rep(0,10)),A,0.001,1000)
 # 
