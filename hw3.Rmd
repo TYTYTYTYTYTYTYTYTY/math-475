@@ -80,7 +80,7 @@ local_search_steps <- function(init_par, asso_matrix){
     #print(score_record)
   }
   
-  print(score_record)
+  #print(score_record)
   
   if(max(score_record, na.rm = TRUE) >init_score){ 
     steepest <- which.max(score_record)
@@ -115,27 +115,28 @@ local_search_steps_itr <- function(init_par, asso_matrix, tol, max_step ){
 
 }
 
-# 
-# pi2 <- local_search_steps(pi1,A)
-# pi1
-# pi2
-# 
-# rxy(pi2,A)
-# # 
-# local_search_steps(pi,A)
-# 
-# 
- local_search_steps_itr(pi1,A,0.001,1000)
- 
- local_search_steps_itr(c(1,1,1,1,1,rep(0,10)),A,0.001,1000)
-# 
- local_search_steps_itr(c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),A,0.01,1000)
- local_search_steps_itr(c(rep(1,15)),A,0.01,1000)
- 
+pi1 <- data.frame(seq(1:1000))
 
- #local_search_steps_itr(c(rep(1,15)),A,0.001,1000)
+pi1 <- apply(pi1, 1, function(x){set.seed(x) 
+  return(as.integer(runif(15)>0.5))}) %>% 
+  t()%>% 
+  as.data.frame()
 
-#local_search_steps(pi,A)
+result_poola <- apply(pi1,1, function(x){return(local_search_steps_itr(x, A,0.001,1000))})
+
+result_tablea <- rbind(lapply(result_pooa,function(x){x$'R_xy'}),lapply(result_poola,function(x){x$solution})) %>% 
+  t()%>% 
+  data.frame() 
+
+
+table(as.character(result_tablea$X1))
+
+
+result_tablea[which(result_tablea$X1 == '0.34219405926104'),]$X2 %>% 
+  unique()
+
+
+
 
 ```
 
@@ -146,7 +147,7 @@ annealing_step <- function(init_par, asso_matrix, temp){
   init_pi <- init_par
   init_score <- rxy(init_pi,asso_matrix)
   score_record <- rep(0,length(pi))
-  for (i in 1:length(pi)) {
+  for (i in 1:length(init_par)) {
     new_pi <- init_par
     new_pi[i] <- 1- init_par[i]
     #print(new_pi)
@@ -157,7 +158,7 @@ annealing_step <- function(init_par, asso_matrix, temp){
   rand_choice <- sample.int(length(init_par),1)
   #print(rand_choice)
   
-  if(score_record[rand_choice]>=init_score ){
+  if(score_record[rand_choice]>init_score ){
     new_pi <- init_pi
     new_pi[rand_choice] <-1 - init_pi[rand_choice]
     #print(new_pi)
@@ -171,6 +172,8 @@ annealing_step <- function(init_par, asso_matrix, temp){
   
 }
 
+
+
 annealing_step_itr <- function(init_par,asso_matrix, max_iter, temps){
   num_iter <- 0
   old_pi <- init_par
@@ -182,12 +185,31 @@ annealing_step_itr <- function(init_par,asso_matrix, max_iter, temps){
     old_pi <- new_pi
     #print(c(new_pi,rxy(new_pi,A)))
   }
-  return(list(solution = new_pi, rxy(new_pi,asso_matrix )))
+  return(list(solution = new_pi, R_xy = rxy(new_pi,asso_matrix )))
 }
 
-annealing_step_itr(pi,A,1000,(1000:1)/1000)
 
-annealing_step_itr(c(rep(0,15)),A,1000,(1000:1)/1000)
+pi2 <- data.frame(seq(1:1000))
+
+pi2 <- apply(pi2, 1, function(x){set.seed(x) 
+  return(as.integer(runif(15)>0.5))}) %>% 
+  t()%>% 
+  as.data.frame()
+
+result_poolb <- apply(pi2,1, function(x){return(annealing_step_itr(x, A,1000,(1000:1)/1000))})
+
+result_tableb <- rbind(lapply(result_poolb,function(x){x$'R_xy'}),lapply(result_poolb,function(x){x$solution})) %>% 
+  t()%>% 
+  data.frame() 
+
+
+table(as.character(result_tableb$X1))
+
+
+result_tableb[which(result_tableb$X1 == '0.34219405926104'),]$X2 %>% 
+  unique()
+
+
 
 
 ```
@@ -229,13 +251,7 @@ Simpson_rule <- function(fun, up, lo, n ){
 
 
 ```{r}
-laplace_approx <- function(fun, up, lo, ){
-    if(lo>up){
-     c <- up
-     up <- lo
-     lo <- c
-   } 
-}
+
 
 ```
 
@@ -251,39 +267,29 @@ sample_std_normal <- function(n){
   
 }
 
-#qqnorm(sample_std_normal(10000))
+qqnorm(sample_std_normal(10000))
+
 #ks.test(rnorm(100000),sample_std_normal(100000))
 # the generator is okay 
 
 # mu =0 , sigma =1 , n=1000
-W_01 <- exp(0+1*sample_std_normal(1000))
-prod(W_01)^(1/1000)
+pool01 <- data.frame(rep(1,1000))
+apply(pool01,1 , function(x){W_01 <- exp(0+1*(sample_std_normal(1000))) 
+                              return(prod(W_01)^(1/1000))}) %>%mean()
+
 
 # mu =1 , sigma =1 , n=1000
-pool11 <- data.frame(rep(1,1000))
-apply(pool11,1 , function(x){W_11 <- exp(1+1*(sample_std_normal(300))) 
-                              return(prod(W_11)^(1/300))}) %>%mean()
-
-
-
+pool11 <- data.frame(rep(1,500))
+apply(pool11,1 , function(x){W_11 <- exp(1+1*(sample_std_normal(500))) 
+                              return(prod(W_11)^(1/500))}) %>%mean()
 
 
 # mu =2 , sigma =2 , n=1000
-pool22 <- data.frame(rep(1,1000))
-apply(pool22,1 , function(x){W_11 <- exp(2+sample_std_normal(300)+sample_std_normal(300)) 
-                              return(prod(W_11)^(1/300))}) %>%mean()
+pool22 <- data.frame(rep(1,300))
+apply(pool22,1 , function(x){W_21 <- exp(2+sample_std_normal(300)+sample_std_normal(300)) 
+                              return(prod(W_21)^(1/300))}) %>%mean()
 
 
-
-  a <-c(0)
-  n <- 10^4
-for (i in 1:1000) {
-
-  a[i]<-prod(exp(0+1*sample_std_normal(n)))^(1/n)
-  
-}
-
-plot(a)
 
 
 ```
