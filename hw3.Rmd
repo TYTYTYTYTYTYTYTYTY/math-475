@@ -19,7 +19,6 @@ library(tidyverse)
 library(faraway)
 library(latex2exp)
 library(MPV)
-library(HH)
 ```
 
 ```{r}
@@ -47,24 +46,27 @@ pi <- as.integer(runif(n)>0.5)
 rxy <- function(init_par, asso_matrix){
   nc <- sum(init_par)
   np <- length(init_par)-nc
-  vc <- sum(1-asso_matrix[,which(init_par ==1)]) - nc # subtract over counting diag
-  vp <- sum(asso_matrix[,which(init_par ==0)]) #diag are 0 so ok
+  vc <- sum(1-asso_matrix[which(init_par ==1),which(init_par ==1)]) - nc # subtract over counting diag
+  vp <- sum(asso_matrix[which(init_par ==0),which(init_par ==0)]) #diag are 0 so ok
   dc <- nc^2-nc
   dp <- np^2-np
   d <- dc+dp
   
   sx <- sqrt((dc/d)*(dp/d))
   sy <- sqrt(((dc -vc+vp)/d)*((dp-vp+vc)/d))
-  s2xy <- ((dc-vc)/d)-(dc/d)*((dc-vc-vp)/d)
+  s2xy <- ((dc-vc)/d)-(dc/d)*((dc-vc+vp)/d)
   
   rxy <- s2xy/(sx*sy)
   
-  if(is.infinite(rxy)| is.na(rxy)){rxy <- -1} # exclude the condition when dc or dp is 0 
+  if(nc==length(init_par)-1 | np == length(init_par)-1){ rxy <- -99}
+  if(nc==length(init_par) | np==length(init_par)){rxy <- -100}
+  
   return(rxy)
   
 }
-
-
+asso_matrix <- A
+init_par <- c(1,rep(0,14))
+rxy(c(rep(0,15)),A)
 
 local_search_steps <- function(init_par, asso_matrix){
   init_pi <- init_par
@@ -78,9 +80,9 @@ local_search_steps <- function(init_par, asso_matrix){
     #print(score_record)
   }
   
- 
+  #print(score_record)
   
-  if(max(score_record, na.rm = TRUE) >= init_score ){ 
+  if(max(score_record, na.rm = TRUE) >init_score){ 
     steepest <- which.max(score_record)
     next_itr <- init_pi
     next_itr[steepest] <- 1- init_pi[steepest]
@@ -108,7 +110,7 @@ local_search_steps_itr <- function(init_par, asso_matrix, tol, max_step ){
     }
     else{
       num_itr <- num_itr+1
-      diff <- abs(rxy(pi_new,asso_matrix)-rxy(pi_old,asso_matrix))
+      diff <- abs(rxy(pi_new,asso_matrix)-rxy(pi_old,asso_matrix)) #????
       pi_old <- pi_new
     }
 
@@ -127,16 +129,22 @@ local_search_steps_itr <- function(init_par, asso_matrix, tol, max_step ){
 # 
 # 
  local_search_steps_itr(pi,A,0.001,1000)
+ 
+ local_search_steps_itr(c(1,1,1,1,1,rep(0,10)),A,0.001,1000)
 # 
- local_search_steps_itr(c(1,0,0,0,0,0,0,0,0,1,0,0,0,0,0),A,0.01,1000)
+ local_search_steps_itr(c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),A,0.01,1000)
+ local_search_steps_itr(c(rep(1,15)),A,0.01,1000)
  
-  local_search_steps_itr(c( 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1),A,0.01,1000)
- 
+
+ #local_search_steps_itr(c(rep(1,15)),A,0.001,1000)
+
+#local_search_steps(pi,A)
+
 ```
 
 
-```{r}
 
+```{r}
 annealing_step <- function(init_par, asso_matrix, temp){
   init_pi <- init_par
   init_score <- rxy(init_pi,asso_matrix)
@@ -155,15 +163,13 @@ annealing_step <- function(init_par, asso_matrix, temp){
   if(score_record[rand_choice]>=init_score ){
     new_pi <- init_pi
     new_pi[rand_choice] <-1 - init_pi[rand_choice]
+    #print(new_pi)
     return(new_pi)
   }
   else {
-    p_a <- min(1, exp((init_score-score_record[rand_choice]/temp)))
-    if(rbinom(1,1,p_a)==1 & !is.na(p_a)){
-      return(new_pi)
-    }else{
-      return(init_pi)
-    }
+    p_a <- min(1, exp((-init_score+score_record[rand_choice]/temp)))
+    if(rbinom(1,1,p_a)==1){return(new_pi)}
+    else{return(init_pi)}
   }
   
 }
@@ -177,15 +183,17 @@ annealing_step_itr <- function(init_par,asso_matrix, max_iter, temps){
     num_iter <- num_iter+1
     #print(num_iter)
     old_pi <- new_pi
+    #print(c(new_pi,rxy(new_pi,A)))
   }
   return(list(solution = new_pi, rxy(new_pi,asso_matrix )))
 }
 
 annealing_step_itr(pi,A,1000,(1000:1)/1000)
 
-annealing_step_itr(c(1,0,0,0,0,0,0,0,0,1,0,0,0,0,0),A,1000,(1000:1)/1000)
-```
+annealing_step_itr(c(rep(0,15)),A,1000,(1000:1)/1000)
 
+
+```
 
 
 \[ \]
