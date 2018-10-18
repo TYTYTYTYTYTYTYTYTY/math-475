@@ -3,9 +3,9 @@ title: 'Math475 Homework3 '
 author: 'Muzhou liu '
 date: "October 17, 2018"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
-  pdf_document: default
   word_document: default
 header-includes: \usepackage{amsthm}
 ---
@@ -116,7 +116,6 @@ local_search_steps_itr <- function(init_par, asso_matrix, tol, max_step ){
 }
 
 pi1 <- data.frame(seq(1:1000))
-
 pi1 <- apply(pi1, 1, function(x){set.seed(x) 
   return(as.integer(runif(15)>0.5))}) %>% 
   t()%>% 
@@ -124,14 +123,14 @@ pi1 <- apply(pi1, 1, function(x){set.seed(x)
 
 result_poola <- apply(pi1,1, function(x){return(local_search_steps_itr(x, A,0.001,1000))})
 
-result_tablea <- rbind(lapply(result_pooa,function(x){x$'R_xy'}),lapply(result_poola,function(x){x$solution})) %>% 
+result_tablea <- rbind(lapply(result_poola,function(x){x$'R_xy'}),lapply(result_poola,function(x){x$solution})) %>% 
   t()%>% 
   data.frame() 
 
 
 table(as.character(result_tablea$X1))
 
-
+# choose the best and the most common resutl 
 result_tablea[which(result_tablea$X1 == '0.34219405926104'),]$X2 %>% 
   unique()
 
@@ -139,6 +138,7 @@ result_tablea[which(result_tablea$X1 == '0.34219405926104'),]$X2 %>%
 
 
 ```
+
 
 
 
@@ -190,7 +190,6 @@ annealing_step_itr <- function(init_par,asso_matrix, max_iter, temps){
 
 
 pi2 <- data.frame(seq(1:1000))
-
 pi2 <- apply(pi2, 1, function(x){set.seed(x) 
   return(as.integer(runif(15)>0.5))}) %>% 
   t()%>% 
@@ -205,7 +204,7 @@ result_tableb <- rbind(lapply(result_poolb,function(x){x$'R_xy'}),lapply(result_
 
 table(as.character(result_tableb$X1))
 
-
+# choose the best the most common resutl 
 result_tableb[which(result_tableb$X1 == '0.34219405926104'),]$X2 %>% 
   unique()
 
@@ -215,7 +214,40 @@ result_tableb[which(result_tableb$X1 == '0.34219405926104'),]$X2 %>%
 ```
 
 
-\[ \]
+```{r}
+c <- optim(sample(c(0,1),15,replace=T), 
+      function(x){rxy(x,A)}, 
+      function(x){annealing_step(x,A,(1000:1)/1000)},
+      method = c("SANN"),
+      control = list(maxit=1000,temp=1000:1,fnscale=-1,tmax=1000))
+
+
+pi3 <- data.frame(seq(1:1000))
+pi3 <- apply(pi3, 1, function(x){set.seed(x) 
+  return(as.integer(runif(15)>0.5))}) %>% 
+  t()%>% 
+  as.data.frame()
+
+result_poolc <- apply(pi3 ,1, function(x){return(optim(x, 
+      function(x){rxy(x,A)}, 
+      function(x){annealing_step(x,A,(1000:1)/1000)},
+      method = c("SANN"),
+      control = list(maxit=1000,temp=1000:1,fnscale=-1,tmax=1000))[1:2])})
+
+result_tablec <- rbind(lapply(result_poolc,function(x){x$'value'}),lapply(result_poolc,function(x){x$par})) %>% 
+  t()%>% 
+  data.frame() 
+
+
+table(as.character(result_tablec$X1))
+
+# choose the best the most common resutl 
+result_tableb[which(result_tableb$X1 == '0.34219405926104'),]$X2 %>% 
+  unique()
+
+```
+
+
 ```{r}
 Simpson_rule <- function(fun, up, lo, n ){
    if(lo>up){
@@ -289,7 +321,9 @@ pool22 <- data.frame(rep(1,300))
 apply(pool22,1 , function(x){W_21 <- exp(2+sample_std_normal(300)+sample_std_normal(300)) 
                               return(prod(W_21)^(1/300))}) %>%mean()
 
-
-
-
 ```
+
+
+ * d)
+ 
+ all three methods have relatively close results to the theortical value that we are expecting. However, the laplace appromixation has the shortest run time, while the other two consumed a long time to run a result. Also, for the Monte Carlo method, we cannot set n larget enought when simulating expacted value of the geometric mean, as the product of $x_i$s would exceed the maxim tolarance of the program.
