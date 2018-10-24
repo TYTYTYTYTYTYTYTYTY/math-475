@@ -1,0 +1,122 @@
+---
+title: 'Take home quesiton '
+author: 'Muzhou liu '
+date: "October 26, 2018"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  word_document: default
+header-includes: \usepackage{amsthm}
+---
+
+
+```{r setup, echo=FALSE, include=FALSE}
+# set global chunk options: images will be 7x5 inches
+knitr::opts_chunk$set(fig.width=7, fig.height=5)
+options(digits = 4)
+library(tidyverse)
+library(faraway)
+library(latex2exp)
+library(MPV)
+library(data.table)
+```
+
+## a)
+```{r}
+D_n <- function(theta, q , data ){
+  n<- length(data)
+  return((sum(abs(theta-data)-data)/(2*n) + (1-2*q)*theta/2)*0.05)
+}
+
+```
+
+## b)
+```{r}
+norwegian.fire <- fread('https://www.math.wustl.edu/~nasyring/475/norwegianfire.txt')
+X.old <- norwegian.fire$V1[norwegian.fire$V2 == 89]/500
+         X <- norwegian.fire$V1[norwegian.fire$V2 == 90]/500
+
+```
+
+## c)
+```{r}
+p.shape <- 2
+p.scale <- as.numeric(quantile(X.old, 0.995)/2)
+
+
+temp_fun <- function(theta,q, data){return(exp(-length(data)*D_n(theta,0.995,data))*dgamma(theta,shape = p.shape,scale = p.scale))}
+
+
+Simpson_rule_exam <- function(fun, up, lo, n, q, data){
+   if(lo>up){
+     c <- up
+     up <- lo
+     lo <- c
+   }
+   xi_s <- lo+ c(1:n)/n *(up-lo)
+   h <- (up-lo)/n
+   sum <-0 
+   for (i in 1:(n-1)) {
+     sum <- sum+ h/6 * (fun(xi_s[i],q,data)+4* fun((xi_s[i]+xi_s[i+1])/2,q,data) + fun(xi_s[i+1],q,data)) 
+   }
+   
+   return(sum)
+}
+
+
+posterior_exam <- function(theta, q, data) {
+  temp_fun(theta,q,data)/ Simpson_rule_exam(temp_fun,-1000,1000,10000,q,data)
+}
+  
+
+theta_is <- seq(-20,150,by = 0.5) %>% data.frame()
+
+apply(theta_is,1, function(x){posterior_exam(x,0.995,X)}) -> temp_result
+
+plot(seq(-20,150,by = 0.5),temp_result)
+
+
+#plot(apply(data_frame(c(1:10)),1, function(x){posterior_exam(x,0.995,X,temp_fun)}))
+
+
+#posterior_exam(150,0.995,X,temp_fun)
+
+#temp_fun(1000,0.995,X)
+
+```
+
+```{r}
+
+ quasi_newton_method_rank1_exam <- function(theta, grad, tol,learning_rate, max_itr,q,data){
+
+  step <- learning_rate
+  H <- 1
+  old_par <- theta
+  rel_tol <- tol*2
+  n_itr <- 0
+  
+  while(rel_tol > tol & n_itr < max_itr){
+    new_par <- old_par -H* grad(old_par,q,data)*step
+    zn <- new_par-old_par
+    yn <- grad(new_par,q,data)-grad(old_par,q,data)
+    
+    H <- H+ ((zn- H * yn) * (zn- H *yn)/(as.double((zn- H * yn) * yn)))
+    old_par <- new_par
+    n_itr <- n_itr+1
+    rel_tol<- abs(grad(new_par,q,data))
+    
+    # print(new_par)
+    # print(rel_tol)
+  }
+
+   return(list(solution = new_par,'number of iteration' = n_itr))
+ }
+
+
+posterior_exam1 <- function(theta, q, data){ return(-1* posterior_exam1(theta, q, data))}
+
+quasi_newton_method_rank1_exam(10,posterior_exam1,10^(-40),1,100000,0.995,X)
+
+```
+
