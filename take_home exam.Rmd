@@ -14,7 +14,7 @@ header-includes: \usepackage{amsthm}
 ```{r setup, echo=FALSE, include=FALSE}
 # set global chunk options: images will be 7x5 inches
 knitr::opts_chunk$set(fig.width=7, fig.height=5)
-options(digits = 4)
+options(digits = 15)
 library(tidyverse)
 library(faraway)
 library(latex2exp)
@@ -35,7 +35,7 @@ D_n <- function(theta, q , data ){
 ```{r}
 norwegian.fire <- fread('https://www.math.wustl.edu/~nasyring/475/norwegianfire.txt')
 X.old <- norwegian.fire$V1[norwegian.fire$V2 == 89]/500
-         X <- norwegian.fire$V1[norwegian.fire$V2 == 90]/500
+ X <- norwegian.fire$V1[norwegian.fire$V2 == 90]/500
 
 ```
 
@@ -45,7 +45,7 @@ p.shape <- 2
 p.scale <- as.numeric(quantile(X.old, 0.995)/2)
 
 
-temp_fun <- function(theta,q, data){return(exp(-length(data)*D_n(theta,0.995,data))*dgamma(theta,shape = p.shape,scale = p.scale))}
+numerator <- function(theta,q, data){return(exp(-length(data)*D_n(theta,0.995,data))*dgamma(theta,shape = p.shape,scale = p.scale))}
 
 
 Simpson_rule_exam <- function(fun, up, lo, n, q, data){
@@ -64,25 +64,29 @@ Simpson_rule_exam <- function(fun, up, lo, n, q, data){
    return(sum)
 }
 
+denominator <- Simpson_rule_exam(numerator,-1000,1000,10000,q,X) 
 
-posterior_exam <- function(theta, q, data) {
-  temp_fun(theta,q,data)/ Simpson_rule_exam(temp_fun,-1000,1000,10000,q,data)
+
+posterior_exam <- function(theta, q,data) {
+  numerator(theta,q,data)/ denominator
 }
   
 
-theta_is <- seq(-20,150,by = 0.5) %>% data.frame()
+theta_is <- seq(-20,150,by = 0.001) %>% data.frame()
 
 apply(theta_is,1, function(x){posterior_exam(x,0.995,X)}) -> temp_result
 
-plot(seq(-20,150,by = 0.5),temp_result)
+plot(seq(-20,150,by = 0.01),temp_result,pch='.')
 
 
-#plot(apply(data_frame(c(1:10)),1, function(x){posterior_exam(x,0.995,X,temp_fun)}))
+#plot(apply(data_frame(c(1:10)),1, function(x){posterior_exam(x,0.995,X,numerator)}))
 
 
-#posterior_exam(150,0.995,X,temp_fun)
+#posterior_exam(150,0.995,X,numerator)
 
-#temp_fun(1000,0.995,X)
+#numerator(1000,0.995,X)
+
+temp_result[which.max(temp_result)]
 
 ```
 
@@ -91,7 +95,7 @@ plot(seq(-20,150,by = 0.5),temp_result)
  quasi_newton_method_rank1_exam <- function(theta, grad, tol,learning_rate, max_itr,q,data){
 
   step <- learning_rate
-  H <- 1
+  H <- 0.001
   old_par <- theta
   rel_tol <- tol*2
   n_itr <- 0
@@ -99,24 +103,62 @@ plot(seq(-20,150,by = 0.5),temp_result)
   while(rel_tol > tol & n_itr < max_itr){
     new_par <- old_par -H* grad(old_par,q,data)*step
     zn <- new_par-old_par
+    print(zn)
     yn <- grad(new_par,q,data)-grad(old_par,q,data)
-    
+    print(yn)
     H <- H+ ((zn- H * yn) * (zn- H *yn)/(as.double((zn- H * yn) * yn)))
+    print(H)
     old_par <- new_par
     n_itr <- n_itr+1
     rel_tol<- abs(grad(new_par,q,data))
     
-    # print(new_par)
-    # print(rel_tol)
+    #print(new_par)
+     #print(rel_tol)
   }
 
    return(list(solution = new_par,'number of iteration' = n_itr))
  }
 
 
-posterior_exam1 <- function(theta, q, data){ return(-1* posterior_exam1(theta, q, data))}
 
-quasi_newton_method_rank1_exam(10,posterior_exam1,10^(-40),1,100000,0.995,X)
+Fst_dri_posterior(51,0.995,X)
+Fst_dri_posterior(52,0.995,X)
+
+
 
 ```
 
+```{r}
+# using the gradient descend to find the minimum of negative posterior distribution  
+
+gradent_neg_posterior <- function(theta,q,data){
+  
+  dn <- D_n(theta,q,data)
+  n <- length(data)
+  
+  return(-(-n*exp(-n*dn)*(sum(sign(theta-data))/(2*n) + (1-2*q)/2)*0.05*
+             dgamma(theta, scale = p.scale, shape = p.shape)+
+             ((p.shape-1)/theta^2 - 1/(theta*p.scale))*
+             theta^(p.shape)*exp(-theta/p.scale) *exp(-n*dn) * 
+             1/(factorial(p.shape-1)*p.scale^p.shape))/denominator)
+}
+
+
+graden_descend <- function(init_theta,grad,tol, max_it, learning_rate ,q, data){
+  old_theta <- init_theta
+  n_it <- 0 
+  rea_tol <- tol*2
+  while (rea_tol >tol & n_it < max_it) {
+    new_theta <- old_theta - grad(old_theta,q,data)*learning_rate
+    rea_tol <- abs(grad(new_theta,q,data))
+    n_it <- n_it+1 
+    old_theta <- new_theta
+    
+  }
+  return(list(solution = new_theta, n_it = n_it, last_tol = rea_tol))
+} 
+
+# tried several learning rate and find 1/5 is okay to use 
+graden_descend(40, gradent_neg_posterior, 10^(-4), 10^8, 1/5, 0.995, X)
+
+```
