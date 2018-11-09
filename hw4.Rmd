@@ -1,0 +1,137 @@
+---
+title: "Math475 Homework4 "
+author: "Muzhou liu "
+date: "November 09, 2018"
+output: pdf_document
+
+header-includes:
+   - \usepackage{amsthm}
+---
+
+
+```{r setup, echo=FALSE, include=FALSE}
+# set global chunk options: images will be 7x5 inches
+knitr::opts_chunk$set(fig.width=7, fig.height=5)
+options(digits = 8)
+library(tidyverse)
+library(GGally)
+library(latex2exp)
+library(rmutil)
+```
+
+# problem 2 
+
+```{r}
+m = 10000
+u = runif(m/2)
+u_anti = 1 - u
+
+g_anti = ( exp(u) + exp(u_anti) )/2
+
+E_anti = mean( g_anti )
+
+var_anti = var( g_anti )/(m/2)
+
+u_simp = runif(m)
+E_simp = mean( exp(u_simp) )
+var_simp = var( exp(u_simp) )/m
+perc_reduc = 100*(var_simp - var_anti)/var_simp
+###output
+c(E_simp, E_anti)
+c(var_simp, var_anti, perc_reduc)
+
+
+```
+
+# problem 4 
+
+```{r}
+
+g4 <- function(x){
+  x^2/sqrt(2*pi) * exp(-x^2/2)
+}
+
+u_pet <- rpareto(10000,1,1.1)
+fg_pet <- g4(u_pet)/dpareto(u_pet,1,1.1)
+
+mean(fg_pet)
+
+
+```
+
+# Problem 5
+
+
+## a)
+```{r}
+
+root1 <- 1/5
+root2 <- 2/5 
+
+slope1 <- dbeta(root1,3,5)/root1
+slope2 <- dbeta(root2,3,5) /(root2-1)
+
+convex_x <-  -slope2/(slope1-slope2)
+convex_y <- slope1*convex_x
+
+area <- convex_y/2
+
+```
+
+
+## b)
+
+```{r}
+invcdf <- function(x){
+  return(ifelse(x < convex_x, 
+         sqrt(x*area*2*(1/slope1)),
+         1-sqrt((1-x)*2*area*(-1/slope2))))
+}
+
+triangle_pdf <- function(x){
+  return(ifelse(x < convex_x, slope1*x/area , (-slope2 +slope2*x)/area ))
+} 
+
+accept_rej_samp <- function(n) {
+  
+  n_accept  <- 0 
+  counter <- 0 
+  X <- rep(0,n)
+  
+  while(n_accept < n ) {
+    counter <- counter + 1
+    v=runif(1)
+		x_prime=invcdf(v)
+    	if(runif(1) <= dbeta(x_prime,3,5)/(area*triangle_pdf(x_prime))) {
+      		n_accept <- n_accept + 1
+      		X[n_accept] <- x_prime
+    	}
+		}
+  return(list(sample= X, rate = n/counter))
+}
+
+
+```
+
+## c)
+```{r}
+result <- accept_rej_samp(10000)
+
+print(paste('rate is' , result$rate, ' 1/c is ', 1/area ))
+
+```
+
+## d)
+```{r}
+data.frame(k=result$sample) %>% 
+  ggplot(aes(k,y=..density..)) + 
+  geom_histogram(color = 'black', fill = 'white') + 
+  geom_density(data =data.frame( true =  qbeta(seq(0, 1, length=10000),3,5)), aes(true),alpha=.2, fill="#FF6666")
+
+
+qqplot( rbeta(10000,3,5),result$sample)
+qqline(rbeta(10000,3,5),datax = TRUE, distribution = function(x){qbeta(x,3,5)}, col= 'red')
+  
+```
+
+Both the density plot and Q-Q plot shows that our sample is from Beta(3,5)
