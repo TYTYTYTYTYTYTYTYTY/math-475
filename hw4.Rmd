@@ -17,9 +17,10 @@ library(tidyverse)
 library(GGally)
 library(latex2exp)
 library(rmutil)
+library(tolerance)
 ```
 
-# problem 2 
+# problem 5.7
 
 ```{r}
 m = 10000
@@ -43,7 +44,15 @@ c(var_simp, var_anti, perc_reduc)
 
 ```
 
-# problem 4 
+The result we get here is pretty colose the the theorethical values from proble 5.6. 
+
+# problem 5.13
+
+The two importance function I am choosing are $\phi_1(x) = \frac{1}{x^{1.5}}$ and $\phi_2(x) = 0.3e^{-0.3x+0.3}$ 
+
+The first one is a Pareto distribution with scale 1 and shape 0.5.  
+
+The second one is a shifted exponeitnal distribuiton with shift 1 and rate 10/3.
 
 ```{r}
 
@@ -51,13 +60,35 @@ g4 <- function(x){
   x^2/sqrt(2*pi) * exp(-x^2/2)
 }
 
-u_pet <- rpareto(10000,1,1.1)
-fg_pet <- g4(u_pet)/dpareto(u_pet,1,1.1)
+qPareto1 <- function(u,b=1) {
+ return( 1/(1-u)^(1/b) ) }
 
-mean(fg_pet)
+rPareto1 <- function(m, b=1) {qPareto1(runif(m),b) }
+
+x1 = rPareto1(10000,0.5)
+gf1 = g4(x1)/((0.5/x1^1.5))
+mean(gf1) 
+
+var(gf1)
 
 
+
+
+x2 <- r2exp(10000,10/3,1)
+
+gf2 <- g4(x2)/d2exp(x2,10/3,1)
+
+
+mean(gf2)
+
+var(gf2)
+
+integrate(g4,1,Inf)
 ```
+The mean we got from the two importance sampling are close the the true one. 
+
+Actually $\phi_2(x)$ has a slightly smaller variance that cannot tell using the plot in problem 5.13. 
+
 
 # Problem 5
 
@@ -126,7 +157,8 @@ print(paste('rate is' , result$rate, ' 1/c is ', 1/area ))
 data.frame(k=result$sample) %>% 
   ggplot(aes(k,y=..density..)) + 
   geom_histogram(color = 'black', fill = 'white') + 
-  geom_density(data =data.frame( true =  qbeta(seq(0, 1, length=10000),3,5)), aes(true),alpha=.2, fill="#FF6666")
+  geom_density(data =data.frame( true =  qbeta(seq(0, 1, length=10000),3,5)), 
+               aes(true),alpha=.2, fill="#FF6666")
 
 
 qqplot( rbeta(10000,3,5),result$sample)
