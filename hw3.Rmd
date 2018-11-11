@@ -116,7 +116,7 @@ local_search_steps_itr <- function(init_par, asso_matrix, tol, max_step ){
 
 }
 
-pi1 <- data.frame(seq(1:1000))
+pi1 <- data.frame(seq(1:100))
 pi1 <- apply(pi1, 1, function(x){set.seed(x) 
   return(as.integer(runif(15)>0.5))}) %>% 
   t()%>% 
@@ -191,7 +191,7 @@ annealing_step_itr <- function(init_par,asso_matrix, max_iter, temps){
 }
 
 
-pi2 <- data.frame(seq(1:1000))
+pi2 <- data.frame(seq(1:100))
 pi2 <- apply(pi2, 1, function(x){set.seed(x) 
   return(as.integer(runif(15)>0.5))}) %>% 
   t()%>% 
@@ -226,7 +226,7 @@ result_tableb[which(result_tableb$X1 == '0.34219405926104'),]$X2 %>%
  #      control = list(maxit=1000,temp=1000:1,fnscale=-1,tmax=1000))
 
 
-pi3 <- data.frame(seq(1:1000))
+pi3 <- data.frame(seq(1:100))
 pi3 <- apply(pi3, 1, function(x){set.seed(x) 
   return(as.integer(runif(15)>0.5))}) %>% 
   t()%>% 

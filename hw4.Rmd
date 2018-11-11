@@ -1,11 +1,12 @@
 ---
-title: "Math475 Homework4 "
-author: "Muzhou liu "
+title: 'Math475 Homework4 '
+author: 'Muzhou liu '
 date: "November 09, 2018"
-output: pdf_document
-
-header-includes:
-   - \usepackage{amsthm}
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+header-includes: \usepackage{amsthm}
 ---
 
 
@@ -21,6 +22,7 @@ library(tolerance)
 ```
 
 # problem 5.7
+
 
 ```{r}
 m = 10000
@@ -44,35 +46,23 @@ c(var_simp, var_anti, perc_reduc)
 
 ```
 
-The result we get here is pretty colose the the theorethical values from proble 5.6. 
-
-# problem 5.13
-
-The two importance function I am choosing are $\phi_1(x) = \frac{1}{x^{1.5}}$ and $\phi_2(x) = 0.3e^{-0.3x+0.3}$ 
-
-The first one is a Pareto distribution with scale 1 and shape 0.5.  
-
-The second one is a shifted exponeitnal distribuiton with shift 1 and rate 10/3.
 
 ```{r}
-
-g4 <- function(x){
-  x^2/sqrt(2*pi) * exp(-x^2/2)
+g4 <- function(x){ x^2/sqrt(2*pi) * exp(-x^2/2)
 }
-
-qPareto1 <- function(u,b=1) {
- return( 1/(1-u)^(1/b) ) }
-
+qPareto1 <- function(u,b=1) {return( 1/(1-u)^(1/b) ) }
 rPareto1 <- function(m, b=1) {qPareto1(runif(m),b) }
-
-x1 = rPareto1(10000,0.5)
-gf1 = g4(x1)/((0.5/x1^1.5))
-mean(gf1) 
-
+x1 <- rPareto1(10000,0.5) 
+gf1 = g4(x1)/((0.5/x1^1.5)) 
+mean(gf1)
 var(gf1)
-
-
-
+q_my <- function(u) { log(u/1.34986, base = 0.740818)
+}
+r_my <- function(m){ q_my(runif(m))} 
+x2 <- r_my(10000)
+gf2 <- g4(x2)/(0.3*exp(-0.3*x2+0.3))
+mean(gf2)
+var(gf2)
 
 x2 <- r2exp(10000,10/3,1)
 
@@ -84,11 +74,11 @@ mean(gf2)
 var(gf2)
 
 integrate(g4,1,Inf)
+
 ```
 The mean we got from the two importance sampling are close the the true one. 
 
 Actually $\phi_2(x)$ has a slightly smaller variance that cannot tell using the plot in problem 5.13. 
-
 
 # Problem 5
 

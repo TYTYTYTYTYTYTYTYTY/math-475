@@ -45,7 +45,8 @@ p.shape <- 2
 p.scale <- as.numeric(quantile(X.old, 0.995)/2)
 
 
-numerator <- function(theta,q, data){return(exp(-length(data)*D_n(theta,0.995,data))*dgamma(theta,shape = p.shape,scale = p.scale))}
+numerator <- function(theta,q, data){return(exp(-length(data)*D_n(theta,0.995,data))*
+                                              dgamma(theta,shape = p.shape,scale = p.scale))}
 
 
 Simpson_rule_exam <- function(fun, up, lo, n, q, data){
@@ -58,7 +59,8 @@ Simpson_rule_exam <- function(fun, up, lo, n, q, data){
    h <- (up-lo)/n
    sum <-0 
    for (i in 1:(n-1)) {
-     sum <- sum+ h/6 * (fun(xi_s[i],q,data)+4* fun((xi_s[i]+xi_s[i+1])/2,q,data) + fun(xi_s[i+1],q,data)) 
+     sum <- sum+ h/6 * (fun(xi_s[i],q,data)+4* fun((xi_s[i]+xi_s[i+1])/2,q,data) +
+                          fun(xi_s[i+1],q,data)) 
    }
    
    return(sum)
@@ -70,64 +72,21 @@ denominator <- Simpson_rule_exam(numerator,-1000,1000,10000,q,X)
 posterior_exam <- function(theta, q,data) {
   numerator(theta,q,data)/ denominator
 }
-  
+```
+
+## d)
+```{r}
 
 theta_is <- seq(-20,150,by = 0.001) %>% data.frame()
 
 apply(theta_is,1, function(x){posterior_exam(x,0.995,X)}) -> temp_result
 
-plot(seq(-20,150,by = 0.01),temp_result,pch='.')
-
-
-#plot(apply(data_frame(c(1:10)),1, function(x){posterior_exam(x,0.995,X,numerator)}))
-
-
-#posterior_exam(150,0.995,X,numerator)
-
-#numerator(1000,0.995,X)
-
-temp_result[which.max(temp_result)]
+plot(seq(-20,150,by = 0.001),temp_result,pch='.', xlab = 'theta from -20 to 150 ', ylab = 'Posterior distribution')
 
 ```
 
-```{r}
 
- quasi_newton_method_rank1_exam <- function(theta, grad, tol,learning_rate, max_itr,q,data){
-
-  step <- learning_rate
-  H <- 0.001
-  old_par <- theta
-  rel_tol <- tol*2
-  n_itr <- 0
-  
-  while(rel_tol > tol & n_itr < max_itr){
-    new_par <- old_par -H* grad(old_par,q,data)*step
-    zn <- new_par-old_par
-    print(zn)
-    yn <- grad(new_par,q,data)-grad(old_par,q,data)
-    print(yn)
-    H <- H+ ((zn- H * yn) * (zn- H *yn)/(as.double((zn- H * yn) * yn)))
-    print(H)
-    old_par <- new_par
-    n_itr <- n_itr+1
-    rel_tol<- abs(grad(new_par,q,data))
-    
-    #print(new_par)
-     #print(rel_tol)
-  }
-
-   return(list(solution = new_par,'number of iteration' = n_itr))
- }
-
-
-
-Fst_dri_posterior(51,0.995,X)
-Fst_dri_posterior(52,0.995,X)
-
-
-
-```
-
+## e)
 ```{r}
 # using the gradient descend to find the minimum of negative posterior distribution  
 
@@ -153,12 +112,13 @@ graden_descend <- function(init_theta,grad,tol, max_it, learning_rate ,q, data){
     rea_tol <- abs(grad(new_theta,q,data))
     n_it <- n_it+1 
     old_theta <- new_theta
+    if(grad(new_theta,q,data)>grad(old_theta,q,data)){learning_rate = learning_rate/2}
     
   }
   return(list(solution = new_theta, n_it = n_it, last_tol = rea_tol))
 } 
 
-# tried several learning rate and find 1/5 is okay to use 
-graden_descend(40, gradent_neg_posterior, 10^(-4), 10^8, 1/5, 0.995, X)
+
+graden_descend(40, gradent_neg_posterior, 10^(-4), 10000,1, 0.995, X)
 
 ```
