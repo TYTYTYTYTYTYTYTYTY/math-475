@@ -1,0 +1,79 @@
+
+
+
+```{r}
+
+v_x <- function(x,y){return(x^2*y^2*sin(x+y)*log(x+y))}
+
+v_x <- Vectorize(v_x)
+
+m <- 10000
+
+x <- runif(m)*pi/4
+y <- runif(m)*pi/4
+
+sum(v_x(x,y))/m*(pi/4)^2
+
+str(v_x(x,y))
+```
+
+
+```{r}
+
+f1 <- function(x,y) {return(cos(x*y)*x*y)}
+f1 <- Vectorize(f1)
+
+mc_f1 <- f1(x,y)
+mc_v <- v_x(x,y)
+
+corr_f1_v <- cor(mc_f1, mc_v )
+
+c_star1 <- -cov(mc_f1,mc_v)/var(mc_f1)
+
+mc_cv1 <- mc_v + c_star1*(mc_f1*(pi/4)^2 -(0.090665))
+
+mean(mc_v)
+mean(mc_cv1)
+
+
+(var(mc_v)-var(mc_cv1))/var(mc_v)
+
+```
+
+
+```{r}
+f2 <- function(x,y) {return(x^2*y^2)}
+f2 <- Vectorize(f2)
+
+mc_f2 <- f2(x,y)
+mc_v <- v_x(x,y)
+
+corr_f2_v <- cor(mc_f2, mc_v )
+
+c_star2 <- -cov(mc_f2,mc_v)/var(mc_f2)
+
+mc_cv2 <- mc_v + c_star2*(mc_f2*(pi/4)^2 -(0.026079))
+
+mean(mc_v)
+mean(mc_cv2)
+
+
+(var(mc_v)-var(mc_cv2))/var(mc_v)
+
+```
+
+
+```{r}
+linmod <- lm(mc_v~mc_f1+mc_f2)
+
+cstar_comb <- -linmod$coefficients[2:3]
+
+mc_cv_comb <- mc_v +   matrix(cbind(mc_f1*(pi/4)^2 -(0.090665) , mc_f2*(pi/4)^2 -(0.026079)) ,m,2) %*% matrix(cstar_comb,2,1)
+
+mean(mc_cv_comb)
+
+(var(mc_cv1)-var(mc_cv_comb))/var(mc_cv1)
+(var(mc_cv2)-var(mc_cv_comb))/var(mc_cv2)                         
+(var(mc_v)-var(mc_cv_comb))/var(mc_v)
+
+```
