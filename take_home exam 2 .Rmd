@@ -1,5 +1,26 @@
+---
+title: 'Math475 Take home problem 2  '
+author: 'Muzhou liu '
+date: "November 19, 2018"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  word_document: default
+header-includes: \usepackage{amsthm}
+---
 
 
+```{r setup, echo=FALSE, include=FALSE}
+# set global chunk options: images will be 7x5 inches
+knitr::opts_chunk$set(fig.width=7, fig.height=5)
+options(digits = 8)
+library(tidyverse)
+library(faraway)
+library(latex2exp)
+library(MPV)
+library(HH)
+```
 
 ```{r}
 
@@ -11,10 +32,11 @@ m <- 10000
 
 x <- runif(m)*pi/4
 y <- runif(m)*pi/4
+mc_v <- v_x(x,y)*(pi/4)^2
 
-sum(v_x(x,y))/m*(pi/4)^2
+sum(mc_v)/m
 
-str(v_x(x,y))
+
 ```
 
 
@@ -23,19 +45,18 @@ str(v_x(x,y))
 f1 <- function(x,y) {return(cos(x*y)*x*y)}
 f1 <- Vectorize(f1)
 
-mc_f1 <- f1(x,y)
-mc_v <- v_x(x,y)
+mc_f1 <- f1(x,y)*(pi/4)^2
 
 corr_f1_v <- cor(mc_f1, mc_v )
 
 c_star1 <- -cov(mc_f1,mc_v)/var(mc_f1)
 
-mc_cv1 <- mc_v + c_star1*(mc_f1*(pi/4)^2 -(0.090665))
+mc_cv1 <- mc_v + c_star1*(mc_f1 -(0.090665))
 
 mean(mc_v)
 mean(mc_cv1)
 
-
+#decrease from naive 
 (var(mc_v)-var(mc_cv1))/var(mc_v)
 
 ```
@@ -45,19 +66,18 @@ mean(mc_cv1)
 f2 <- function(x,y) {return(x^2*y^2)}
 f2 <- Vectorize(f2)
 
-mc_f2 <- f2(x,y)
-mc_v <- v_x(x,y)
+mc_f2 <- f2(x,y)*(pi/4)^2
 
 corr_f2_v <- cor(mc_f2, mc_v )
 
 c_star2 <- -cov(mc_f2,mc_v)/var(mc_f2)
 
-mc_cv2 <- mc_v + c_star2*(mc_f2*(pi/4)^2 -(0.026079))
+mc_cv2 <- mc_v + c_star2*(mc_f2 -(0.026079))
 
 mean(mc_v)
 mean(mc_cv2)
 
-
+# decrease from naive 
 (var(mc_v)-var(mc_cv2))/var(mc_v)
 
 ```
@@ -68,12 +88,14 @@ linmod <- lm(mc_v~mc_f1+mc_f2)
 
 cstar_comb <- -linmod$coefficients[2:3]
 
-mc_cv_comb <- mc_v +   matrix(cbind(mc_f1*(pi/4)^2 -(0.090665) , mc_f2*(pi/4)^2 -(0.026079)) ,m,2) %*% matrix(cstar_comb,2,1)
+mc_cv_comb <- mc_v +   matrix(cbind(mc_f1 -(0.090665) , mc_f2 -(0.026079)) ,m,2) %*% matrix(cstar_comb,2,1)
 
 mean(mc_cv_comb)
-
+# decrease from only f1
 (var(mc_cv1)-var(mc_cv_comb))/var(mc_cv1)
-(var(mc_cv2)-var(mc_cv_comb))/var(mc_cv2)                         
+# decrease from only f2
+(var(mc_cv2)-var(mc_cv_comb))/var(mc_cv2)  
+# decrease from naive 
 (var(mc_v)-var(mc_cv_comb))/var(mc_v)
 
 ```
